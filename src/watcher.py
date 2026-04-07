@@ -23,9 +23,8 @@ class TraderWatcher:
         """
         url = f"{DATA_HOST}/trades"
         params = {
-            "maker": self.trader_address,
+            "user": self.trader_address,
             "limit": limit,
-            # Can also add: "taker", "market", "before", "after"
         }
 
         try:
