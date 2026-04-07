@@ -23,9 +23,8 @@ def main():
     # 1. Geoblock check — MUST pass before trading
     logger.info("Checking geoblock status...")
     if not check_geoblock():
-        logger.error("Bot running from blocked region! Orders will fail. Deploy to eu-west-1.")
-        # In production: sys.exit(1)
-        # For now, continue for development/testing of read-only features
+        logger.error("Bot running from blocked region! Exiting.")
+        sys.exit(1)
 
     # 2. Set up the watcher (no auth needed)
     watcher = TraderWatcher(COLDMATH_ADDRESS)

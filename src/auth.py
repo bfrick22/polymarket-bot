@@ -40,7 +40,7 @@ def get_authenticated_client() -> ClobClient:
         chain_id=CHAIN_ID,
         key=PRIVATE_KEY,
         creds=creds,
-        signature_type=2,      # GNOSIS_SAFE — change to 1 if you used email/Google login
+        signature_type=1,      # POLY_PROXY — for email/Google login on polymarket.com
         funder=POLY_ADDRESS    # your proxy wallet address from polymarket.com/settings
     )
 

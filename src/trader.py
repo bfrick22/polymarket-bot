@@ -1,5 +1,6 @@
 import logging
 from py_clob_client.client import ClobClient
+from py_clob_client.clob_types import OrderArgs
 from config import COPY_RATIO, MAX_TRADE_USD
 
 logger = logging.getLogger(__name__)
@@ -14,60 +15,64 @@ class CopyTrader:
     def __init__(self, client: ClobClient):
         self.client = client
 
-    def scale_size(self, original_size: float) -> float:
+    def scale_size(self, shares: float, price: float) -> float:
         """
-        Scale the target's trade size down to our size.
-        E.g. if they buy $1000 and COPY_RATIO=0.1, we buy $100.
-        Capped at MAX_TRADE_USD for risk management.
+        Convert target's share count to a USD value, apply COPY_RATIO,
+        then convert back to shares at the same price.
+
+        E.g. target buys 1000 shares @ $0.65 = $650 USD.
+        At COPY_RATIO=0.1 we want $65 USD = 100 shares.
+        Capped at MAX_TRADE_USD.
         """
-        scaled = original_size * COPY_RATIO
-        return min(scaled, MAX_TRADE_USD)
+        usd_value = shares * price
+        our_usd = min(usd_value * COPY_RATIO, MAX_TRADE_USD)
+        our_shares = our_usd / price if price > 0 else 0
+        return our_shares
 
     def copy_trade(self, trade: dict) -> dict | None:
         """
         Mirror a single detected trade.
 
-        A trade object from the Data API looks like:
+        Trade object from Data API:
         {
-            "id": "abc123",
-            "market": "token_id_here",
-            "outcome": "Yes",
+            "asset": "token_id...",
             "side": "BUY",
             "price": 0.65,
-            "size": 500.0,
+            "size": 1000.0,   # shares, not USD
             ...
         }
         """
         try:
-            token_id = trade.get("asset_id") or trade.get("market")
+            token_id = trade.get("asset")
             side = trade.get("side", "BUY").upper()
             price = float(trade.get("price", 0))
-            original_size = float(trade.get("size", 0))
+            shares = float(trade.get("size", 0))
 
-            if not token_id or not price or not original_size:
+            if not token_id or not price or not shares:
                 logger.warning(f"Incomplete trade data: {trade}")
                 return None
 
-            our_size = self.scale_size(original_size)
+            our_shares = self.scale_size(shares, price)
+            our_usd = our_shares * price
 
-            if our_size < 1.0:  # Polymarket minimum
-                logger.info(f"Trade too small after scaling: ${our_size:.2f}, skipping")
+            if our_usd < 1.0:  # Polymarket minimum $1
+                logger.info(f"Trade too small after scaling: ${our_usd:.2f}, skipping")
                 return None
 
             logger.info(
-                f"Copying trade: {side} {token_id} @ {price} "
-                f"size={our_size:.2f} (original: {original_size:.2f})"
+                f"Copying trade: {side} {token_id[:16]}... @ {price} "
+                f"shares={our_shares:.2f} (${our_usd:.2f}) "
+                f"[target: {shares:.2f} shares (${shares * price:.2f})]"
             )
 
-            # Place the order via CLOB API
-            # This requires L2 auth + the order is signed with your private key
-            order = self.client.create_and_post_order({
-                "token_id": token_id,
-                "price": price,
-                "size": our_size,
-                "side": side,
-            })
+            order_args = OrderArgs(
+                token_id=token_id,
+                price=price,
+                size=our_shares,
+                side=side,
+            )
 
+            order = self.client.create_and_post_order(order_args)
             logger.info(f"Order placed: {order}")
             return order
 
