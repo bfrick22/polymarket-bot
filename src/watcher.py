@@ -35,6 +35,18 @@ class TraderWatcher:
             logger.error(f"Failed to fetch trades for {self.trader_address}: {e}")
             return []
 
+    def seed_seen_trades(self) -> None:
+        """
+        Pre-populate seen_trade_ids with current recent trades so the bot
+        doesn't copy historical trades on startup — only new ones going forward.
+        """
+        trades = self.get_recent_trades()
+        for trade in trades:
+            trade_id = trade.get("transactionHash")
+            if trade_id:
+                self.seen_trade_ids.add(trade_id)
+        logger.info(f"Seeded {len(self.seen_trade_ids)} existing trades — watching for new ones")
+
     def get_new_trades(self) -> list:
         """
         Returns only trades we haven't seen before.
@@ -44,11 +56,11 @@ class TraderWatcher:
         new_trades = []
 
         for trade in trades:
-            trade_id = trade.get("id")
+            trade_id = trade.get("transactionHash")
             if trade_id and trade_id not in self.seen_trade_ids:
                 self.seen_trade_ids.add(trade_id)
                 new_trades.append(trade)
-                logger.info(f"New trade detected: {trade_id}")
+                logger.info(f"New trade detected: {trade_id[:16]}...")
 
         return new_trades
 

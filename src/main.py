@@ -40,6 +40,9 @@ def main():
     positions = watcher.get_positions()
     logger.info(f"Target has {len(positions)} open positions")
 
+    # Seed seen trades so we don't copy historical trades on startup
+    watcher.seed_seen_trades()
+
     # 5. Main polling loop
     logger.info(f"Starting polling loop (every {POLL_INTERVAL_SEC}s)...")
     while True:
