@@ -15,7 +15,10 @@ class TraderWatcher:
         self.trader_address = trader_address
         self.seen_trade_ids = set()
 
-    def get_recent_trades(self, limit: int = 20) -> list:
+    def get_recent_trades(self, limit: int = None) -> list:
+        import os
+        if limit is None:
+            limit = int(os.getenv("RECENT_TRADES_LIMIT", 40))
         """
         Fetch recent trades for the target trader.
         No auth needed — this is a public endpoint.
