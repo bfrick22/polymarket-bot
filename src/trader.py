@@ -1,7 +1,7 @@
 import logging
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import OrderArgs
-from config import COPY_RATIO, MAX_TRADE_USD
+from config import COPY_RATIO, COPY_RATIO_SMALL, MAX_TRADE_USD
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +17,15 @@ class CopyTrader:
 
     def scale_size(self, shares: float, price: float) -> float:
         """
-        Convert target's share count to a USD value, apply COPY_RATIO,
+        Convert target's share count to a USD value, apply ratio,
         then convert back to shares at the same price.
 
-        E.g. target buys 1000 shares @ $0.65 = $650 USD.
-        At COPY_RATIO=0.1 we want $65 USD = 100 shares.
-        Capped at MAX_TRADE_USD.
+        Small trades (target USD <= MAX_TRADE_USD) use COPY_RATIO_SMALL (35%)
+        for a more meaningful position. Large trades use COPY_RATIO, capped at MAX_TRADE_USD.
         """
         usd_value = shares * price
-        our_usd = min(usd_value * COPY_RATIO, MAX_TRADE_USD)
+        ratio = COPY_RATIO_SMALL if usd_value <= MAX_TRADE_USD else COPY_RATIO
+        our_usd = min(usd_value * ratio, MAX_TRADE_USD)
         our_shares = our_usd / price if price > 0 else 0
         return our_shares
 

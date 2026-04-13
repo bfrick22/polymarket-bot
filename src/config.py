@@ -16,8 +16,9 @@ DATA_HOST = "https://data-api.polymarket.com"
 TARGET_TRADER = os.getenv("TARGET_TRADER", "coldmath")  # the address, not username
 
 # Copy trading settings
-COPY_RATIO = float(os.getenv("COPY_RATIO", "0.1"))  # use 10% of target's position size
-MAX_TRADE_USD = float(os.getenv("MAX_TRADE_USD", "50"))  # never copy more than $50/trade
+COPY_RATIO = float(os.getenv("COPY_RATIO", "0.1"))              # % of target's trade when target > MAX_TRADE_USD
+COPY_RATIO_SMALL = float(os.getenv("COPY_RATIO_SMALL", "0.35")) # % of target's trade when target <= MAX_TRADE_USD
+MAX_TRADE_USD = float(os.getenv("MAX_TRADE_USD", "50"))         # never copy more than $50/trade
 POLL_INTERVAL_SEC = int(os.getenv("POLL_INTERVAL_SEC", "10"))  # check every 10 seconds
 
 # Chain
