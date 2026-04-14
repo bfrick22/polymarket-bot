@@ -55,7 +55,7 @@ class CopyTrader:
             our_shares = self.scale_size(shares, price)
             our_usd = our_shares * price
 
-            if our_shares < 5.0:  # Polymarket minimum 5 shares
+            if our_usd < 1.0:  # Polymarket minimum ~$1 USD
                 logger.info(f"Trade too small after scaling: {our_shares:.2f} shares (${our_usd:.2f}), skipping")
                 return None
 
