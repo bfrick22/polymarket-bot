@@ -1,5 +1,7 @@
 import requests
 import logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from config import DATA_HOST
 
 logger = logging.getLogger(__name__)
@@ -14,6 +16,20 @@ class TraderWatcher:
     def __init__(self, trader_address: str):
         self.trader_address = trader_address
         self.seen_trade_ids = set()
+        self.session = self._make_session()
+
+    def _make_session(self) -> requests.Session:
+        session = requests.Session()
+        retry = Retry(
+            total=3,
+            backoff_factor=1,          # waits 1s, 2s, 4s between retries
+            status_forcelist=[500, 502, 503, 504],
+            allowed_methods=["GET"],
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        return session
 
     def get_recent_trades(self, limit: int = None) -> list:
         import os
@@ -31,7 +47,7 @@ class TraderWatcher:
         }
 
         try:
-            resp = requests.get(url, params=params, timeout=10)
+            resp = self.session.get(url, params=params, timeout=10)
             resp.raise_for_status()
             return resp.json()
         except requests.RequestException as e:
@@ -77,7 +93,7 @@ class TraderWatcher:
         params = {"user": self.trader_address}
 
         try:
-            resp = requests.get(url, params=params, timeout=10)
+            resp = self.session.get(url, params=params, timeout=10)
             resp.raise_for_status()
             return resp.json()
         except requests.RequestException as e:
