@@ -21,10 +21,13 @@ class TraderWatcher:
     def _make_session(self) -> requests.Session:
         session = requests.Session()
         retry = Retry(
-            total=3,
-            backoff_factor=1,          # waits 1s, 2s, 4s between retries
-            status_forcelist=[500, 502, 503, 504],
+            total=5,
+            connect=5,
+            read=5,
+            backoff_factor=1,          # waits 1s, 2s, 4s, 8s, 16s between retries
+            status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["GET"],
+            raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retry)
         session.mount("https://", adapter)
