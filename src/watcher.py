@@ -24,14 +24,15 @@ class TraderWatcher:
             total=5,
             connect=5,
             read=5,
-            backoff_factor=1,          # waits 1s, 2s, 4s, 8s, 16s between retries
+            backoff_factor=1,
             status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["GET"],
             raise_on_status=False,
         )
-        adapter = HTTPAdapter(max_retries=retry)
+        adapter = HTTPAdapter(max_retries=retry, pool_connections=1, pool_maxsize=1)
         session.mount("https://", adapter)
         session.mount("http://", adapter)
+        session.headers.update({"Connection": "close"})  # don't keep connections alive
         return session
 
     def get_recent_trades(self, limit: int = None) -> list:

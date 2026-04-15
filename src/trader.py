@@ -1,7 +1,7 @@
 import logging
 from py_clob_client.client import ClobClient
 from py_clob_client.clob_types import OrderArgs
-from config import COPY_RATIO, COPY_RATIO_SMALL, MAX_TRADE_USD
+from config import COPY_RATIO, COPY_RATIO_SMALL, MAX_TRADE_USD, MARKET_KEYWORDS
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,13 @@ class CopyTrader:
             if not token_id or not price or not shares:
                 logger.warning(f"Incomplete trade data: {trade}")
                 return None
+
+            # Market keyword filter
+            if MARKET_KEYWORDS:
+                title = trade.get("title", "").lower()
+                if not any(kw in title for kw in MARKET_KEYWORDS):
+                    logger.debug(f"Skipping non-weather market: {trade.get('title', 'unknown')}")
+                    return None
 
             our_shares = self.scale_size(shares, price)
             our_usd = our_shares * price

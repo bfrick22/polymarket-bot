@@ -21,5 +21,10 @@ COPY_RATIO_SMALL = float(os.getenv("COPY_RATIO_SMALL", "0.35")) # % of target's 
 MAX_TRADE_USD = float(os.getenv("MAX_TRADE_USD", "50"))         # never copy more than $50/trade
 POLL_INTERVAL_SEC = int(os.getenv("POLL_INTERVAL_SEC", "10"))  # check every 10 seconds
 
+# Market filter — only copy trades whose title contains one of these keywords (case-insensitive)
+# Set to empty string to copy all markets
+_raw = os.getenv("MARKET_KEYWORDS", "weather,temperature,rain,snow,hurricane,tornado,precipitation,degrees,wind,flood,frost,hail,blizzard,drought")
+MARKET_KEYWORDS = [kw.strip().lower() for kw in _raw.split(",") if kw.strip()]
+
 # Chain
 CHAIN_ID = 137  # Polygon mainnet
