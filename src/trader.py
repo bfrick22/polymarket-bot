@@ -56,7 +56,7 @@ class CopyTrader:
             if MARKET_KEYWORDS:
                 title = trade.get("title", "").lower()
                 if not any(kw in title for kw in MARKET_KEYWORDS):
-                    logger.debug(f"Skipping non-weather market: {trade.get('title', 'unknown')}")
+                    logger.info(f"Skipping non-weather market: {trade.get('title', 'unknown')}")
                     return None
 
             our_shares = self.scale_size(shares, price)
