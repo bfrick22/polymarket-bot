@@ -34,9 +34,17 @@ resource "aws_ecs_task_definition" "bot" {
     image     = "${aws_ecr_repository.bot.repository_url}:${var.image_tag}"
     essential = true
 
-    environment = [
-      { name = "ENV_BUCKET", value = aws_s3_bucket.env.bucket },
-      { name = "ENV_KEY",    value = ".env" }
+    # ECS injects these before the container starts — no app-side secret fetching needed.
+    # valueFrom syntax for JSON secret keys: <secret_arn>:<json_key>::
+    secrets = [
+      { name = "PRIVATE_KEY",         valueFrom = "${aws_secretsmanager_secret.config.arn}:PRIVATE_KEY::" },
+      { name = "POLY_ADDRESS",         valueFrom = "${aws_secretsmanager_secret.config.arn}:POLY_ADDRESS::" },
+      { name = "TARGET_TRADER",        valueFrom = "${aws_secretsmanager_secret.config.arn}:TARGET_TRADER::" },
+      { name = "COPY_RATIO",           valueFrom = "${aws_secretsmanager_secret.config.arn}:COPY_RATIO::" },
+      { name = "COPY_RATIO_SMALL",     valueFrom = "${aws_secretsmanager_secret.config.arn}:COPY_RATIO_SMALL::" },
+      { name = "MAX_TRADE_USD",        valueFrom = "${aws_secretsmanager_secret.config.arn}:MAX_TRADE_USD::" },
+      { name = "POLL_INTERVAL_SEC",    valueFrom = "${aws_secretsmanager_secret.config.arn}:POLL_INTERVAL_SEC::" },
+      { name = "RECENT_TRADES_LIMIT",  valueFrom = "${aws_secretsmanager_secret.config.arn}:RECENT_TRADES_LIMIT::" },
     ]
 
     logConfiguration = {

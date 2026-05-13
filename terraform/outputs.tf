@@ -3,9 +3,9 @@ output "ecr_repository_url" {
   value       = aws_ecr_repository.bot.repository_url
 }
 
-output "s3_env_bucket" {
-  description = "S3 bucket name — upload your .env file here"
-  value       = aws_s3_bucket.env.bucket
+output "secrets_manager_arn" {
+  description = "Secrets Manager ARN — populate this with your .env values"
+  value       = aws_secretsmanager_secret.config.arn
 }
 
 output "ecs_cluster_name" {
@@ -17,21 +17,33 @@ output "ecs_service_name" {
 }
 
 output "deploy_commands" {
-  description = "Steps to build, push, and upload env after terraform apply"
+  description = "Steps to populate secrets, build image, and deploy after terraform apply"
   value       = <<-EOT
 
-    # 1. Authenticate Docker to ECR
+    # 1. Populate Secrets Manager from your .env file (run once, re-run to update)
+    aws secretsmanager put-secret-value \
+      --secret-id ${aws_secretsmanager_secret.config.arn} \
+      --region ${var.aws_region} \
+      --secret-string "$(python3 -c "
+    import json, re
+    vals = {}
+    for line in open('.env'):
+        line = line.strip()
+        if not line or line.startswith('#'): continue
+        k, _, v = line.partition('=')
+        vals[k.strip()] = v.strip()
+    print(json.dumps(vals))
+    ")"
+
+    # 2. Authenticate Docker to ECR
     aws ecr get-login-password --region ${var.aws_region} | \
       docker login --username AWS --password-stdin ${aws_ecr_repository.bot.repository_url}
 
-    # 2. Build and push (use --platform for Apple Silicon)
+    # 3. Build and push (--platform required on Apple Silicon)
     docker build --platform linux/amd64 -t ${aws_ecr_repository.bot.repository_url}:latest .
     docker push ${aws_ecr_repository.bot.repository_url}:latest
 
-    # 3. Upload your .env to S3
-    aws s3 cp .env s3://${aws_s3_bucket.env.bucket}/.env
-
-    # 4. Force a new deployment to pick up the latest image/env
+    # 4. Force a new deployment to pick up latest image/secrets
     aws ecs update-service --cluster ${aws_ecs_cluster.bot.name} \
       --service ${aws_ecs_service.bot.name} --force-new-deployment \
       --region ${var.aws_region}

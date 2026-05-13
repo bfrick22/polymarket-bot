@@ -69,17 +69,15 @@ Recovers from unexpected errors without crashing — logs and continues.
 
 ---
 
-## AWS Deployment (`terraform/`, `scripts/entrypoint.py`)
+## AWS Deployment (`terraform/`)
 
-ECS Fargate service in `eu-west-1` managed by Terraform.
+ECS Fargate service in `eu-west-1` managed by Terraform. Secrets are injected by the ECS agent at task launch — no application-side secret fetching needed.
 
-### S3 Env Loading (`scripts/entrypoint.py`)
+### Secret Loading
 
-Container entrypoint that loads `.env` from S3 before starting the bot:
+All `.env` variables are stored as a single JSON object in AWS Secrets Manager (`polymarket-bot/config`). The ECS task definition maps each JSON key to a container environment variable using the native `secrets` injection mechanism. Secrets are available as normal `os.environ` values when `main.py` starts.
 
-- Reads `ENV_BUCKET` and `ENV_KEY` environment variables (injected by ECS task definition)
-- Downloads the `.env` file and sets each key/value into `os.environ` via `setdefault` (so ECS-level env vars take precedence)
-- Falls back to normal python-dotenv behavior when `ENV_BUCKET` is not set (local development)
+Populate the secret from your local `.env` file using the one-liner in the `deploy_commands` Terraform output.
 
 ### Infrastructure (`terraform/`)
 
@@ -88,10 +86,23 @@ Container entrypoint that loads `.env` from S3 before starting the bot:
 | `main.tf` | Provider, default VPC data sources |
 | `variables.tf` | `aws_region`, `app_name`, `image_tag` |
 | `ecr.tf` | ECR repository with lifecycle policy (keep last 3 images) |
-| `s3.tf` | Private encrypted S3 bucket for the `.env` file |
-| `iam.tf` | Execution role (ECR pull, CloudWatch) + Task role (S3 read) |
+| `secretsmanager.tf` | Secrets Manager secret for all `.env` variables |
+| `iam.tf` | Execution role (ECR pull, CloudWatch, SM read) + Task role (no extra perms) |
 | `cloudwatch.tf` | Log group with 7-day retention |
 | `ecs.tf` | Cluster, task definition (256 CPU / 512 MB), service (1 task) |
-| `outputs.tf` | ECR URL, S3 bucket name, deploy commands |
+| `outputs.tf` | ECR URL, SM ARN, deploy commands |
 
 **Cost profile:** ~$10–13/mo (0.25 vCPU Fargate + ECR + CloudWatch). Uses default VPC with `assign_public_ip = true` to avoid NAT gateway costs.
+
+### CLI User Policy (`iam/cli-policy.json`)
+
+Least-privilege IAM policy for the human/CI user that runs `terraform apply` and deploys images. Scoped to `polymarket-bot-*` resources and `eu-west-1` only. Replace `ACCOUNT_ID` before attaching.
+
+```bash
+# One-time setup:
+aws iam create-user --user-name polymarket-bot-deployer
+aws iam put-user-policy --user-name polymarket-bot-deployer \
+  --policy-name polymarket-bot-deploy \
+  --policy-document file://iam/cli-policy.json
+aws iam create-access-key --user-name polymarket-bot-deployer
+```
