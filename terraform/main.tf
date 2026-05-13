@@ -20,6 +20,12 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Billing metrics only exist in us-east-1 — required for the billing alarm
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+}
+
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 

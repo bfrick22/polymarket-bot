@@ -8,6 +8,10 @@ output "secrets_manager_arn" {
   value       = aws_secretsmanager_secret.config.arn
 }
 
+output "billing_alarm_name" {
+  value = aws_cloudwatch_metric_alarm.billing.alarm_name
+}
+
 output "ecs_cluster_name" {
   value = aws_ecs_cluster.bot.name
 }

@@ -168,7 +168,10 @@ CloudWatch Logs         → 7-day retention, /ecs/polymarket-bot
 IAM (execution role)    → pulls ECR image, reads Secrets Manager, writes logs
 IAM (task role)         → no extra permissions (app makes only outbound API calls)
 Default VPC             → public subnet + assign_public_ip avoids NAT gateway cost
+Billing Alarm (SNS)     → emails bfrick22@gmail.com when monthly bill hits $20
 ```
+
+> **Billing alarm:** After `terraform apply`, AWS sends a confirmation email to the alarm address. You must click the confirmation link before the alarm activates.
 
 **Estimated cost: ~$10–13/month** (Fargate + ECR storage + CloudWatch)
 
