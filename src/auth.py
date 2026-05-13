@@ -1,6 +1,6 @@
 import logging
 import requests
-from py_clob_client.client import ClobClient
+from py_clob_client_v2.client import ClobClient
 from config import CLOB_HOST, CHAIN_ID, PRIVATE_KEY, POLY_ADDRESS
 
 logger = logging.getLogger(__name__)
@@ -19,17 +19,21 @@ def get_authenticated_client() -> ClobClient:
     if not PRIVATE_KEY:
         raise ValueError("PRIVATE_KEY not set in environment")
 
-    # L1 client — only has private key, can create credentials
+    # L1 client — used to create/derive API credentials.
+    # Must include signature_type=1 and funder so creds are registered as POLY_PROXY,
+    # otherwise the exchange sees a sig type mismatch when orders are posted.
     l1_client = ClobClient(
         host=CLOB_HOST,
         chain_id=CHAIN_ID,
-        key=PRIVATE_KEY
+        key=PRIVATE_KEY,
+        signature_type=1,
+        funder=POLY_ADDRESS,
     )
 
     # Creates or derives L2 API credentials
     # "Derive" means: same private key + same nonce = same API key every time
     logger.info("Creating/deriving API credentials...")
-    creds = l1_client.create_or_derive_api_creds()
+    creds = l1_client.create_or_derive_api_key()
     logger.info(f"Got API key: {creds.api_key[:8]}...")
 
     # L2 client — can trade

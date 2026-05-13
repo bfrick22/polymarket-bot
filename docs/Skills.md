@@ -66,3 +66,32 @@ Orchestrates all skills in sequence:
 6. Poll indefinitely, copying any new trades found
 
 Recovers from unexpected errors without crashing — logs and continues.
+
+---
+
+## AWS Deployment (`terraform/`, `scripts/entrypoint.py`)
+
+ECS Fargate service in `eu-west-1` managed by Terraform.
+
+### S3 Env Loading (`scripts/entrypoint.py`)
+
+Container entrypoint that loads `.env` from S3 before starting the bot:
+
+- Reads `ENV_BUCKET` and `ENV_KEY` environment variables (injected by ECS task definition)
+- Downloads the `.env` file and sets each key/value into `os.environ` via `setdefault` (so ECS-level env vars take precedence)
+- Falls back to normal python-dotenv behavior when `ENV_BUCKET` is not set (local development)
+
+### Infrastructure (`terraform/`)
+
+| File | Purpose |
+|---|---|
+| `main.tf` | Provider, default VPC data sources |
+| `variables.tf` | `aws_region`, `app_name`, `image_tag` |
+| `ecr.tf` | ECR repository with lifecycle policy (keep last 3 images) |
+| `s3.tf` | Private encrypted S3 bucket for the `.env` file |
+| `iam.tf` | Execution role (ECR pull, CloudWatch) + Task role (S3 read) |
+| `cloudwatch.tf` | Log group with 7-day retention |
+| `ecs.tf` | Cluster, task definition (256 CPU / 512 MB), service (1 task) |
+| `outputs.tf` | ECR URL, S3 bucket name, deploy commands |
+
+**Cost profile:** ~$10–13/mo (0.25 vCPU Fargate + ECR + CloudWatch). Uses default VPC with `assign_public_ip = true` to avoid NAT gateway costs.

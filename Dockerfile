@@ -17,4 +17,4 @@ USER botuser
 # Set PYTHONPATH so src/ imports resolve correctly
 ENV PYTHONPATH=/app/src
 
-CMD ["python", "src/main.py"]
+CMD ["python", "scripts/entrypoint.py"]

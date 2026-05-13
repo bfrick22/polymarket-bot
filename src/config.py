@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,8 +13,10 @@ CLOB_HOST = "https://clob.polymarket.com"
 GAMMA_HOST = "https://gamma-api.polymarket.com"
 DATA_HOST = "https://data-api.polymarket.com"
 
-# Trader to copy
-TARGET_TRADER = os.getenv("TARGET_TRADER", "coldmath")  # the address, not username
+# Traders to copy
+_traders_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'traders.json')
+with open(_traders_file) as _f:
+    TRADERS = json.load(_f)
 
 # Copy trading settings
 COPY_RATIO = float(os.getenv("COPY_RATIO", "0.1"))              # % of target's trade when target > MAX_TRADE_USD

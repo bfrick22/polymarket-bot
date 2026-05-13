@@ -1,6 +1,6 @@
 import logging
-from py_clob_client.client import ClobClient
-from py_clob_client.clob_types import OrderArgs
+from py_clob_client_v2.client import ClobClient
+from py_clob_client_v2.clob_types import OrderArgs
 from config import COPY_RATIO, COPY_RATIO_SMALL, MAX_TRADE_USD, MARKET_KEYWORDS
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class CopyTrader:
         our_shares = our_usd / price if price > 0 else 0
         return our_shares
 
-    def copy_trade(self, trade: dict) -> dict | None:
+    def copy_trade(self, trade: dict, trader_name: str = "") -> dict | None:
         """
         Mirror a single detected trade.
 
@@ -66,8 +66,9 @@ class CopyTrader:
                 logger.info(f"Trade too small after scaling: {our_shares:.2f} shares (${our_usd:.2f}), skipping")
                 return None
 
+            label = f"[{trader_name}] " if trader_name else ""
             logger.info(
-                f"Copying trade: {side} {token_id[:16]}... @ {price} "
+                f"{label}Copying trade: {side} {token_id[:16]}... @ {price} "
                 f"shares={our_shares:.2f} (${our_usd:.2f}) "
                 f"[target: {shares:.2f} shares (${shares * price:.2f})]"
             )
