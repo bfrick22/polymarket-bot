@@ -4,7 +4,13 @@ import sys
 from auth import get_authenticated_client, check_geoblock
 from watcher import TraderWatcher
 from trader import CopyTrader
-from config import TRADERS, POLL_INTERVAL_SEC
+from arbitrage import ArbitrageScanner
+from config import (
+    TRADERS,
+    POLL_INTERVAL_SEC,
+    ARB_ENABLED,
+    ARB_POLL_INTERVAL_SEC,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,6 +38,13 @@ def main():
         watcher.seed_seen_trades()
         watchers.append({"name": t["name"], "watcher": watcher})
 
+    arb_scanner = ArbitrageScanner(client) if ARB_ENABLED else None
+    if arb_scanner:
+        logger.info(
+            f"Arb scanner enabled — scanning every {ARB_POLL_INTERVAL_SEC}s"
+        )
+    last_arb_scan = 0.0
+
     logger.info(f"Watching {len(watchers)} trader(s), polling every {POLL_INTERVAL_SEC}s...")
     while True:
         try:
@@ -41,6 +54,13 @@ def main():
                     logger.info(f"[{entry['name']}] Found {len(new_trades)} new trade(s)!")
                     for trade in new_trades:
                         copy_trader.copy_trade(trade, trader_name=entry["name"])
+
+            if arb_scanner and (time.time() - last_arb_scan) >= ARB_POLL_INTERVAL_SEC:
+                last_arb_scan = time.time()
+                try:
+                    arb_scanner.scan_and_fire()
+                except Exception as e:
+                    logger.error(f"Arb scan error: {e}", exc_info=True)
 
         except KeyboardInterrupt:
             logger.info("Bot stopped by user.")

@@ -1,6 +1,6 @@
 # Bot Skills
 
-Capabilities of the Polymarket copy-trading bot and the modules that implement them.
+Capabilities of the Polymarket bot and the modules that implement them.
 
 > **Maintenance rule:** Whenever code changes are made to this bot — bug fixes, new features, config additions, or logic changes — Claude must review and update this file and `Rules.md` to reflect the current behavior before the work is considered complete.
 
@@ -25,6 +25,7 @@ Polls the Polymarket Data API for new trades by a target wallet address. No auth
 - Fetches the last N trades on each poll cycle
 - Deduplicates by `transactionHash` so each trade is processed once
 - Seeds seen trades on startup to avoid replaying history
+- Emits both BUY and SELL trades (the copy module decides handling)
 - Can also fetch the target's current open positions
 
 **Rate limit:** 200 req/10s (well within the 10s poll interval)
@@ -35,22 +36,51 @@ Polls the Polymarket Data API for new trades by a target wallet address. No auth
 
 Converts the target's trade into a proportional position using a tiered ratio system:
 
-- **Small trades** (target USD ≤ MAX_TRADE_USD): use `COPY_RATIO_SMALL` for a more meaningful copy position
-- **Large trades** (target USD > MAX_TRADE_USD): use `COPY_RATIO`, always capped at `MAX_TRADE_USD`
+- **Small trades** (target USD ≤ `MAX_TRADE_USD`): use `COPY_RATIO_SMALL` for a meaningful copy position
+- **Large trades** (target USD > `MAX_TRADE_USD`): use `COPY_RATIO`, always capped at `MAX_TRADE_USD`
 
 Converts between USD and shares using the trade price.
 
 ---
 
-## Trade Copying (`src/trader.py → copy_trade`)
+## BUY Mirroring (`src/trader.py → _mirror_buy`)
 
-Takes a raw trade object from the watcher and places a mirrored order on the CLOB:
+Takes a BUY trade from the watcher and places a scaled BUY on the CLOB:
 
-1. Extracts token ID, side (BUY/SELL), price, and share count
-2. Scales the position via the sizing rules above
-3. Skips trades that fall below Polymarket's 5-share minimum
+1. Scales size via `scale_size`
+2. Skips if below `MIN_SHARES` or below `MIN_POSITION_USD`
+3. Queries our current position on the token; if we're already at `MAX_EXPOSURE_PER_MARKET_USD`, the BUY is skipped. If there's partial room, the BUY is trimmed to fit
 4. Submits the order via `create_and_post_order`
-5. Logs the outcome; errors are caught and skipped without crashing
+5. Logs every decision (skip reasons included); errors are caught and the bot continues
+
+---
+
+## SELL Mirroring (`src/trader.py → _mirror_sell`)
+
+Takes a SELL trade from the watcher and places a proportional SELL on the CLOB:
+
+1. Returns immediately if `MIRROR_SELLS=false`
+2. Queries our current position on the token; skips if none held
+3. Computes proportional close: if target sold fraction *f* of their initial position, we sell *f* × our holdings
+4. Enforces `MIN_SHARES` (rounds up to min if we have enough; otherwise skips)
+5. Submits SELL order via `create_and_post_order`
+
+Without this, the bot accumulated positions indefinitely and held losers to resolution.
+
+---
+
+## Multi-Outcome Arbitrage Scanner (`src/arbitrage.py`)
+
+Scans the Gamma `/events` endpoint for events with mutually-exclusive YES outcomes. When the sum of YES prices across a basket is below `ARB_THRESHOLD`, the scanner buys equal-share quantities of every YES leg — a mechanical guaranteed profit at resolution because exactly one outcome resolves YES.
+
+- Pulls top 100 active events by 24h volume
+- Filters by leg count (`ARB_MIN_OUTCOMES`…`ARB_MAX_OUTCOMES`) to keep baskets mutually exclusive and per-leg size above the share minimum
+- Computes basket size `K = ARB_MAX_BASKET_USD / sum_yes`; required so the basket fits the cap while each leg meets `MIN_SHARES`
+- Tracks `filled_event_ids` to avoid double-buying the same basket on subsequent scans
+- Logs all opportunities (with edge %, leg count, cost, guaranteed payout)
+- Partial fills are logged as `ARB PARTIAL` — degrades but rarely inverts guarantee
+
+This is a category-agnostic positive-EV stream that does not require predicting any outcome.
 
 ---
 
@@ -59,13 +89,29 @@ Takes a raw trade object from the watcher and places a mirrored order on the CLO
 Orchestrates all skills in sequence:
 
 1. Geoblock check (exit if blocked)
-2. Initialize watcher for the target trader
-3. Authenticate and create trading client
-4. Fetch current positions for initial sync
-5. Seed seen trades
-6. Poll indefinitely, copying any new trades found
+2. Authenticate and create trading client
+3. Initialise one `TraderWatcher` per entry in `traders.json` and seed seen trades
+4. Initialise `ArbitrageScanner` if `ARB_ENABLED=true`
+5. Poll every `POLL_INTERVAL_SEC`:
+   - For each watcher: fetch new trades, copy via `CopyTrader`
+   - If `ARB_POLL_INTERVAL_SEC` has elapsed since last scan: run `arb_scanner.scan_and_fire()`
+
+The two cadences are independent: trader copying runs fast (default 10s), arb scanning runs slower (default 60s).
 
 Recovers from unexpected errors without crashing — logs and continues.
+
+---
+
+## Trader Roster (`src/traders.json`)
+
+Current copy targets (rationale documented in `docs/Strategy.md`):
+
+- `coldmath` — +$95k lifetime net; large average trade ($269); mix of cheap longshots and near-certain plays
+- `Hans323` — modest +$792 net but **actively sells** (21% sell rate), which is exactly the behavior we now mirror
+
+Removed: `neobrother` (was running negative -$507; pure weather longshots).
+
+The roster should be re-evaluated periodically against 30d realized PnL. A scout script is planned for Phase 4 of the strategy plan.
 
 ---
 
@@ -77,7 +123,7 @@ ECS Fargate service in `eu-west-1` managed by Terraform. Secrets are injected by
 
 All `.env` variables are stored as a single JSON object in AWS Secrets Manager (`polymarket-bot/config`). The ECS task definition maps each JSON key to a container environment variable using the native `secrets` injection mechanism. Secrets are available as normal `os.environ` values when `main.py` starts.
 
-Populate the secret from your local `.env` file using the one-liner in the `deploy_commands` Terraform output.
+Populate the secret from your local `.env` file using the one-liner in the `deploy_commands` Terraform output. **Note:** when adding new config variables (e.g. arb scanner settings), include them in the JSON pushed to Secrets Manager and force a service redeploy.
 
 ### Infrastructure (`terraform/`)
 
@@ -99,7 +145,6 @@ Populate the secret from your local `.env` file using the one-liner in the `depl
 Least-privilege IAM policy for the human/CI user that runs `terraform apply` and deploys images. Scoped to `polymarket-bot-*` resources and `eu-west-1` only. Replace `ACCOUNT_ID` before attaching.
 
 ```bash
-# One-time setup:
 aws iam create-user --user-name polymarket-bot-deployer
 aws iam put-user-policy --user-name polymarket-bot-deployer \
   --policy-name polymarket-bot-deploy \
