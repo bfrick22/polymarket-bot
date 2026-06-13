@@ -291,16 +291,14 @@ class Crypto5mScanner:
             # Polymarket already repriced — edge gone
             return False
 
-        if delta > 0:
-            logger.info(
-                f"crypto5m SIGNAL_A [{slug}] BTC↑ {delta:+.1f}bps in "
-                f"{CRYPTO_5M_IMPULSE_WINDOW_SEC}s, pm_up_mid={up_mid:.3f} → buy UP"
-            )
-            return self._fire(mkt["up_token"], up_ask, slug, "impulse_up")
+        direction = "↑" if delta > 0 else "↓"
+        side = "UP" if delta > 0 else "DOWN"
         logger.info(
-            f"crypto5m SIGNAL_A [{slug}] {mkt['asset']}↓ {delta:+.1f}bps in "
-            f"{CRYPTO_5M_IMPULSE_WINDOW_SEC}s, pm_up_mid={up_mid:.3f} → buy DOWN"
+            f"crypto5m SIGNAL_A [{slug}] {mkt['asset']}{direction} {delta:+.1f}bps in "
+            f"{CRYPTO_5M_IMPULSE_WINDOW_SEC}s, pm_up_mid={up_mid:.3f} → buy {side}"
         )
+        if delta > 0:
+            return self._fire(mkt["up_token"], up_ask, slug, "impulse_up")
         return self._fire(mkt["down_token"], down_ask, slug, "impulse_down")
 
     def _fire(self, token_id: str, price: float, slug: str, signal: str) -> bool:
