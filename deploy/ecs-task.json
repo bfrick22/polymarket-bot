@@ -11,24 +11,39 @@
       "name": "polymarket-bot",
       "image": "YOUR_ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/polymarket-bot:latest",
       "essential": true,
-      "environment": [
-        { "name": "COPY_RATIO",        "value": "0.1" },
-        { "name": "MAX_TRADE_USD",     "value": "50" },
-        { "name": "POLL_INTERVAL_SEC", "value": "10" }
-      ],
+      "environment": [],
       "secrets": [
-        {
-          "name": "PRIVATE_KEY",
-          "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/PRIVATE_KEY"
-        },
-        {
-          "name": "POLY_ADDRESS",
-          "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/POLY_ADDRESS"
-        },
-        {
-          "name": "TARGET_TRADER",
-          "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/TARGET_TRADER"
-        }
+        { "name": "PRIVATE_KEY",                  "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:PRIVATE_KEY::" },
+        { "name": "POLY_ADDRESS",                 "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:POLY_ADDRESS::" },
+
+        { "name": "COPY_RATIO",                   "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:COPY_RATIO::" },
+        { "name": "COPY_RATIO_SMALL",             "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:COPY_RATIO_SMALL::" },
+        { "name": "MAX_TRADE_USD",                "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:MAX_TRADE_USD::" },
+        { "name": "POLL_INTERVAL_SEC",            "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:POLL_INTERVAL_SEC::" },
+        { "name": "RECENT_TRADES_LIMIT",          "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:RECENT_TRADES_LIMIT::" },
+        { "name": "MIN_SHARES",                   "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:MIN_SHARES::" },
+        { "name": "MIN_POSITION_USD",             "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:MIN_POSITION_USD::" },
+        { "name": "MAX_EXPOSURE_PER_MARKET_USD",  "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:MAX_EXPOSURE_PER_MARKET_USD::" },
+        { "name": "MIRROR_SELLS",                 "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:MIRROR_SELLS::" },
+        { "name": "MARKET_KEYWORDS",              "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:MARKET_KEYWORDS::" },
+
+        { "name": "ARB_ENABLED",                  "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:ARB_ENABLED::" },
+        { "name": "ARB_POLL_INTERVAL_SEC",        "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:ARB_POLL_INTERVAL_SEC::" },
+        { "name": "ARB_THRESHOLD",                "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:ARB_THRESHOLD::" },
+        { "name": "ARB_MIN_EDGE",                 "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:ARB_MIN_EDGE::" },
+        { "name": "ARB_MAX_BASKET_USD",           "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:ARB_MAX_BASKET_USD::" },
+        { "name": "ARB_MIN_OUTCOMES",             "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:ARB_MIN_OUTCOMES::" },
+        { "name": "ARB_MAX_OUTCOMES",             "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:ARB_MAX_OUTCOMES::" },
+
+        { "name": "CRYPTO_5M_ENABLED",            "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_ENABLED::" },
+        { "name": "CRYPTO_5M_POLL_INTERVAL_SEC",  "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_POLL_INTERVAL_SEC::" },
+        { "name": "CRYPTO_5M_ASSETS",             "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_ASSETS::" },
+        { "name": "CRYPTO_5M_MAX_TRADE_USD",      "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_MAX_TRADE_USD::" },
+        { "name": "CRYPTO_5M_IMPULSE_BPS",        "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_IMPULSE_BPS::" },
+        { "name": "CRYPTO_5M_IMPULSE_WINDOW_SEC", "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_IMPULSE_WINDOW_SEC::" },
+        { "name": "CRYPTO_5M_NEUTRAL_BAND",       "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_NEUTRAL_BAND::" },
+        { "name": "CRYPTO_5M_SPREAD_THRESHOLD",   "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_SPREAD_THRESHOLD::" },
+        { "name": "CRYPTO_5M_MIN_SECONDS_LEFT",   "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_MIN_SECONDS_LEFT::" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

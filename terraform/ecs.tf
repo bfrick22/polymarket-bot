@@ -36,15 +36,43 @@ resource "aws_ecs_task_definition" "bot" {
 
     # ECS injects these before the container starts — no app-side secret fetching needed.
     # valueFrom syntax for JSON secret keys: <secret_arn>:<json_key>::
+    # The trader roster lives in src/traders.json (baked into the image), not here.
     secrets = [
-      { name = "PRIVATE_KEY",         valueFrom = "${aws_secretsmanager_secret.config.arn}:PRIVATE_KEY::" },
-      { name = "POLY_ADDRESS",         valueFrom = "${aws_secretsmanager_secret.config.arn}:POLY_ADDRESS::" },
-      { name = "TARGET_TRADER",        valueFrom = "${aws_secretsmanager_secret.config.arn}:TARGET_TRADER::" },
-      { name = "COPY_RATIO",           valueFrom = "${aws_secretsmanager_secret.config.arn}:COPY_RATIO::" },
-      { name = "COPY_RATIO_SMALL",     valueFrom = "${aws_secretsmanager_secret.config.arn}:COPY_RATIO_SMALL::" },
-      { name = "MAX_TRADE_USD",        valueFrom = "${aws_secretsmanager_secret.config.arn}:MAX_TRADE_USD::" },
-      { name = "POLL_INTERVAL_SEC",    valueFrom = "${aws_secretsmanager_secret.config.arn}:POLL_INTERVAL_SEC::" },
-      { name = "RECENT_TRADES_LIMIT",  valueFrom = "${aws_secretsmanager_secret.config.arn}:RECENT_TRADES_LIMIT::" },
+      # --- Required wallet credentials ---
+      { name = "PRIVATE_KEY",                  valueFrom = "${aws_secretsmanager_secret.config.arn}:PRIVATE_KEY::" },
+      { name = "POLY_ADDRESS",                 valueFrom = "${aws_secretsmanager_secret.config.arn}:POLY_ADDRESS::" },
+
+      # --- Phase 1: copy trading ---
+      { name = "COPY_RATIO",                   valueFrom = "${aws_secretsmanager_secret.config.arn}:COPY_RATIO::" },
+      { name = "COPY_RATIO_SMALL",             valueFrom = "${aws_secretsmanager_secret.config.arn}:COPY_RATIO_SMALL::" },
+      { name = "MAX_TRADE_USD",                valueFrom = "${aws_secretsmanager_secret.config.arn}:MAX_TRADE_USD::" },
+      { name = "POLL_INTERVAL_SEC",            valueFrom = "${aws_secretsmanager_secret.config.arn}:POLL_INTERVAL_SEC::" },
+      { name = "RECENT_TRADES_LIMIT",          valueFrom = "${aws_secretsmanager_secret.config.arn}:RECENT_TRADES_LIMIT::" },
+      { name = "MIN_SHARES",                   valueFrom = "${aws_secretsmanager_secret.config.arn}:MIN_SHARES::" },
+      { name = "MIN_POSITION_USD",             valueFrom = "${aws_secretsmanager_secret.config.arn}:MIN_POSITION_USD::" },
+      { name = "MAX_EXPOSURE_PER_MARKET_USD",  valueFrom = "${aws_secretsmanager_secret.config.arn}:MAX_EXPOSURE_PER_MARKET_USD::" },
+      { name = "MIRROR_SELLS",                 valueFrom = "${aws_secretsmanager_secret.config.arn}:MIRROR_SELLS::" },
+      { name = "MARKET_KEYWORDS",              valueFrom = "${aws_secretsmanager_secret.config.arn}:MARKET_KEYWORDS::" },
+
+      # --- Phase 2: multi-outcome arbitrage scanner ---
+      { name = "ARB_ENABLED",                  valueFrom = "${aws_secretsmanager_secret.config.arn}:ARB_ENABLED::" },
+      { name = "ARB_POLL_INTERVAL_SEC",        valueFrom = "${aws_secretsmanager_secret.config.arn}:ARB_POLL_INTERVAL_SEC::" },
+      { name = "ARB_THRESHOLD",                valueFrom = "${aws_secretsmanager_secret.config.arn}:ARB_THRESHOLD::" },
+      { name = "ARB_MIN_EDGE",                 valueFrom = "${aws_secretsmanager_secret.config.arn}:ARB_MIN_EDGE::" },
+      { name = "ARB_MAX_BASKET_USD",           valueFrom = "${aws_secretsmanager_secret.config.arn}:ARB_MAX_BASKET_USD::" },
+      { name = "ARB_MIN_OUTCOMES",             valueFrom = "${aws_secretsmanager_secret.config.arn}:ARB_MIN_OUTCOMES::" },
+      { name = "ARB_MAX_OUTCOMES",             valueFrom = "${aws_secretsmanager_secret.config.arn}:ARB_MAX_OUTCOMES::" },
+
+      # --- Phase 3: ultra-short crypto scanner ---
+      { name = "CRYPTO_5M_ENABLED",            valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_ENABLED::" },
+      { name = "CRYPTO_5M_POLL_INTERVAL_SEC",  valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_POLL_INTERVAL_SEC::" },
+      { name = "CRYPTO_5M_ASSETS",             valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_ASSETS::" },
+      { name = "CRYPTO_5M_MAX_TRADE_USD",      valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_MAX_TRADE_USD::" },
+      { name = "CRYPTO_5M_IMPULSE_BPS",        valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_IMPULSE_BPS::" },
+      { name = "CRYPTO_5M_IMPULSE_WINDOW_SEC", valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_IMPULSE_WINDOW_SEC::" },
+      { name = "CRYPTO_5M_NEUTRAL_BAND",       valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_NEUTRAL_BAND::" },
+      { name = "CRYPTO_5M_SPREAD_THRESHOLD",   valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_SPREAD_THRESHOLD::" },
+      { name = "CRYPTO_5M_MIN_SECONDS_LEFT",   valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_MIN_SECONDS_LEFT::" },
     ]
 
     logConfiguration = {

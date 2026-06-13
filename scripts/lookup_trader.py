@@ -72,9 +72,9 @@ def main():
             address = first.get("proxyWallet") or first.get("address") or first.get("walletAddress")
 
         if address:
-            print(f"\n✓ Found wallet address: {address}")
-            print(f"\nAdd to your .env file:")
-            print(f"  TARGET_TRADER={address}")
+            print(f"\nFound wallet address: {address}")
+            print("\nAdd this entry to src/traders.json:")
+            print(f'  {{ "name": "{username}", "address": "{address}" }}')
         else:
             print("\nAddress not found in Gamma profile response. Trying leaderboard...")
             lookup_by_leaderboard(username)
