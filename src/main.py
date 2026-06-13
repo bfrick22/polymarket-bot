@@ -5,11 +5,14 @@ from auth import get_authenticated_client, check_geoblock
 from watcher import TraderWatcher
 from trader import CopyTrader
 from arbitrage import ArbitrageScanner
+from crypto_5m import Crypto5mScanner
 from config import (
     TRADERS,
     POLL_INTERVAL_SEC,
     ARB_ENABLED,
     ARB_POLL_INTERVAL_SEC,
+    CRYPTO_5M_ENABLED,
+    CRYPTO_5M_POLL_INTERVAL_SEC,
 )
 
 logging.basicConfig(
@@ -45,6 +48,13 @@ def main():
         )
     last_arb_scan = 0.0
 
+    crypto_5m = Crypto5mScanner(client) if CRYPTO_5M_ENABLED else None
+    if crypto_5m:
+        logger.info(
+            f"Crypto 5m scanner enabled — ticking every {CRYPTO_5M_POLL_INTERVAL_SEC}s"
+        )
+    last_crypto_scan = 0.0
+
     logger.info(f"Watching {len(watchers)} trader(s), polling every {POLL_INTERVAL_SEC}s...")
     while True:
         try:
@@ -61,6 +71,13 @@ def main():
                     arb_scanner.scan_and_fire()
                 except Exception as e:
                     logger.error(f"Arb scan error: {e}", exc_info=True)
+
+            if crypto_5m and (time.time() - last_crypto_scan) >= CRYPTO_5M_POLL_INTERVAL_SEC:
+                last_crypto_scan = time.time()
+                try:
+                    crypto_5m.scan_and_fire()
+                except Exception as e:
+                    logger.error(f"crypto5m scan error: {e}", exc_info=True)
 
         except KeyboardInterrupt:
             logger.info("Bot stopped by user.")

@@ -69,6 +69,27 @@ Without this, the bot accumulated positions indefinitely and held losers to reso
 
 ---
 
+## Ultra-Short Crypto Scanner (`src/crypto_5m.py`) — Phase 3
+
+Scans Polymarket's rolling 5-minute BTC/XRP up-or-down markets and fires on two independent inefficiency signals:
+
+- **Binance latency (Signal A):** spot moves > `CRYPTO_5M_IMPULSE_BPS` over the trailing `CRYPTO_5M_IMPULSE_WINDOW_SEC` AND the Polymarket Up mid is still within the neutral band. Fires the direction Binance moved.
+- **Spread floor (Signal B):** `up_ask + down_ask < CRYPTO_5M_SPREAD_THRESHOLD`. Fires BOTH YES legs — guaranteed profit at resolution since the outcomes are mutually exclusive.
+
+Subcomponents:
+
+- `PriceFeed` — bounded ring buffer per asset; `delta_bps(window)` returns trailing change in basis points.
+- `BinanceStream` — daemon thread per asset, subscribes to Binance's public `<symbol>@aggTrade` WebSocket. No Binance account / API key required (public market data is open). Auto-reconnects on disconnect.
+- `Crypto5mScanner` — discovers active 5m markets via Gamma `/markets?order=createdAt`, refreshes every 30s, evaluates both signals per market on each tick.
+
+Sizing: `max(CRYPTO_5M_MAX_TRADE_USD / price, MIN_SHARES)`. Floor enforces Polymarket's 5-share exchange minimum.
+
+Each filled market's slug is tracked in `fired_slugs` to prevent double-fire; the set self-cleans as markets expire.
+
+This is uncorrelated with Phase 2: Phase 2 needs 3+ outcomes & `negRisk=True`, while the up/down markets are 2-outcome binaries (`negRisk=False` on the event) so Phase 2 never touches them.
+
+---
+
 ## Multi-Outcome Arbitrage Scanner (`src/arbitrage.py`)
 
 Scans the Gamma `/events` endpoint for events with mutually-exclusive YES outcomes. When the sum of YES prices across a basket is below `ARB_THRESHOLD`, the scanner buys equal-share quantities of every YES leg — a mechanical guaranteed profit at resolution because exactly one outcome resolves YES.
@@ -92,11 +113,13 @@ Orchestrates all skills in sequence:
 2. Authenticate and create trading client
 3. Initialise one `TraderWatcher` per entry in `traders.json` and seed seen trades
 4. Initialise `ArbitrageScanner` if `ARB_ENABLED=true`
-5. Poll every `POLL_INTERVAL_SEC`:
+5. Initialise `Crypto5mScanner` if `CRYPTO_5M_ENABLED=true` (also starts one Binance WebSocket thread per asset)
+6. Poll every `POLL_INTERVAL_SEC`:
    - For each watcher: fetch new trades, copy via `CopyTrader`
    - If `ARB_POLL_INTERVAL_SEC` has elapsed since last scan: run `arb_scanner.scan_and_fire()`
+   - If `CRYPTO_5M_POLL_INTERVAL_SEC` has elapsed since last tick: run `crypto_5m.scan_and_fire()`
 
-The two cadences are independent: trader copying runs fast (default 10s), arb scanning runs slower (default 60s).
+The three cadences are independent: trader copying default 10s, arb scanning 60s, crypto 5m scanner 5s.
 
 Recovers from unexpected errors without crashing — logs and continues.
 

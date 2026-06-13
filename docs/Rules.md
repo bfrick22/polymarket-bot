@@ -106,7 +106,29 @@ The scanner does **not** sell legs — they're held to resolution.
 
 ---
 
-## 10. Error Handling
+## 10. Ultra-short Crypto Scanner (Phase 3)
+
+When `CRYPTO_5M_ENABLED=true` (default), the bot scans Polymarket's rolling 5-minute up/down crypto markets every `CRYPTO_5M_POLL_INTERVAL_SEC` seconds (default 5s).
+
+Active markets are discovered via `GET /markets?active=true&closed=false&order=createdAt&ascending=false`, filtered by slug prefix `<asset>-updown-5m-*`. Discovery is refreshed every 30 seconds.
+
+For each active market the scanner reads the live top-of-book on both YES tokens (`/book?token_id=...`) and evaluates two independent signals:
+
+**Signal A — Binance latency arbitrage.** Spot price on Binance (via public `aggTrade` WebSocket; no Binance account or API key needed) must move more than `CRYPTO_5M_IMPULSE_BPS` (default 3 bps = 0.03%) over the trailing `CRYPTO_5M_IMPULSE_WINDOW_SEC` (default 5s) window, AND the Polymarket Up market's mid must still be within `0.5 ± CRYPTO_5M_NEUTRAL_BAND` (default ±0.10, i.e. unrepriced). On hit, the scanner buys YES on the direction Binance moved.
+
+**Signal B — spread floor.** Up_ask + Down_ask must be below `CRYPTO_5M_SPREAD_THRESHOLD` (default 0.97). Up/Down are mutually exclusive on these markets, so the basket pays exactly $1 at resolution regardless of which side wins. On hit, the scanner buys BOTH YES sides. Locked-in profit.
+
+A market is also skipped if it expires sooner than `CRYPTO_5M_MIN_SECONDS_LEFT` (default 60s) — avoids stale fills that won't have time to resolve.
+
+Each fire is sized to `max(CRYPTO_5M_MAX_TRADE_USD / price, MIN_SHARES)` — i.e. target $1, but never below the Polymarket 5-share exchange minimum. On a 50¢ entry this means $2.50 actual.
+
+Once a market is filled (either signal), its slug is added to `fired_slugs` and won't be re-checked. The slug leaves the set when the market expires from the discovery cache.
+
+Binance WebSocket runs in one daemon thread per asset; auto-reconnects on disconnect.
+
+---
+
+## 11. Error Handling
 
 A failed trade or scanner cycle (API error, 401, timeout) is logged and skipped. The bot does **not** crash or retry — it continues to the next poll cycle.
 
@@ -134,3 +156,12 @@ All rules are tunable via `.env` without code changes:
 | `ARB_MAX_BASKET_USD` | `20` | Maximum total USD per arb basket |
 | `ARB_MIN_OUTCOMES` | `3` | Minimum legs in a qualifying basket |
 | `ARB_MAX_OUTCOMES` | `30` | Maximum legs in a qualifying basket |
+| `CRYPTO_5M_ENABLED` | `true` | Enable the ultra-short crypto scanner |
+| `CRYPTO_5M_POLL_INTERVAL_SEC` | `5` | Scanner tick cadence |
+| `CRYPTO_5M_ASSETS` | `BTC,XRP` | Assets to scan; must map to a Binance pair in `SYMBOL_MAP` |
+| `CRYPTO_5M_MAX_TRADE_USD` | `1.0` | Target USD per fire (rounds up to MIN_SHARES) |
+| `CRYPTO_5M_IMPULSE_BPS` | `3.0` | Signal A trigger: Binance Δ over the window |
+| `CRYPTO_5M_IMPULSE_WINDOW_SEC` | `5` | Signal A window |
+| `CRYPTO_5M_NEUTRAL_BAND` | `0.10` | Signal A gate: Polymarket mid must be within 0.5 ± this |
+| `CRYPTO_5M_SPREAD_THRESHOLD` | `0.97` | Signal B trigger: up_ask + down_ask below this |
+| `CRYPTO_5M_MIN_SECONDS_LEFT` | `60` | Skip markets resolving sooner than this |

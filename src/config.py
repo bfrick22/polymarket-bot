@@ -51,5 +51,20 @@ ARB_MAX_BASKET_USD = float(os.getenv("ARB_MAX_BASKET_USD", "20"))  # max total $
 ARB_MIN_OUTCOMES = int(os.getenv("ARB_MIN_OUTCOMES", "3"))       # need at least this many YES outcomes
 ARB_MAX_OUTCOMES = int(os.getenv("ARB_MAX_OUTCOMES", "30"))      # skip baskets so wide each leg is < min size
 
+# Ultra-short crypto scanner (Phase 3) — Binance latency arb + spread floor
+CRYPTO_5M_ENABLED = os.getenv("CRYPTO_5M_ENABLED", "true").lower() in ("1", "true", "yes")
+CRYPTO_5M_POLL_INTERVAL_SEC = int(os.getenv("CRYPTO_5M_POLL_INTERVAL_SEC", "5"))
+_raw_assets = os.getenv("CRYPTO_5M_ASSETS", "BTC,XRP")
+CRYPTO_5M_ASSETS = [a.strip().upper() for a in _raw_assets.split(",") if a.strip()]
+CRYPTO_5M_MAX_TRADE_USD = float(os.getenv("CRYPTO_5M_MAX_TRADE_USD", "1.0"))
+# Signal A — Binance impulse
+CRYPTO_5M_IMPULSE_BPS = float(os.getenv("CRYPTO_5M_IMPULSE_BPS", "3.0"))  # 0.03% over the window
+CRYPTO_5M_IMPULSE_WINDOW_SEC = float(os.getenv("CRYPTO_5M_IMPULSE_WINDOW_SEC", "5"))
+CRYPTO_5M_NEUTRAL_BAND = float(os.getenv("CRYPTO_5M_NEUTRAL_BAND", "0.10"))  # mid within 0.5 ± band
+# Signal B — spread floor
+CRYPTO_5M_SPREAD_THRESHOLD = float(os.getenv("CRYPTO_5M_SPREAD_THRESHOLD", "0.97"))
+# Don't fire if the market resolves in less than this many seconds (avoid stale fills)
+CRYPTO_5M_MIN_SECONDS_LEFT = float(os.getenv("CRYPTO_5M_MIN_SECONDS_LEFT", "60"))
+
 # Chain
 CHAIN_ID = 137  # Polygon mainnet
