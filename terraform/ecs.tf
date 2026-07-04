@@ -71,6 +71,7 @@ resource "aws_ecs_task_definition" "bot" {
       { name = "CRYPTO_5M_IMPULSE_BPS",        valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_IMPULSE_BPS::" },
       { name = "CRYPTO_5M_IMPULSE_WINDOW_SEC", valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_IMPULSE_WINDOW_SEC::" },
       { name = "CRYPTO_5M_NEUTRAL_BAND",       valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_NEUTRAL_BAND::" },
+      { name = "CRYPTO_5M_MAX_ENTRY_PRICE",    valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_MAX_ENTRY_PRICE::" },
       { name = "CRYPTO_5M_SPREAD_THRESHOLD",   valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_SPREAD_THRESHOLD::" },
       { name = "CRYPTO_5M_MIN_SECONDS_LEFT",   valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_MIN_SECONDS_LEFT::" },
     ]

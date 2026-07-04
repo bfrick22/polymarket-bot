@@ -160,8 +160,9 @@ All rules are tunable via `.env` without code changes:
 | `CRYPTO_5M_POLL_INTERVAL_SEC` | `5` | Scanner tick cadence |
 | `CRYPTO_5M_ASSETS` | `BTC,XRP` | Assets to scan; must map to a Binance pair in `SYMBOL_MAP` |
 | `CRYPTO_5M_MAX_TRADE_USD` | `1.0` | Target USD per fire (rounds up to MIN_SHARES) |
-| `CRYPTO_5M_IMPULSE_BPS` | `3.0` | Signal A trigger: Binance Δ over the window |
+| `CRYPTO_5M_IMPULSE_BPS` | `10.0` | Signal A trigger: Binance Δ over the window |
 | `CRYPTO_5M_IMPULSE_WINDOW_SEC` | `5` | Signal A window |
-| `CRYPTO_5M_NEUTRAL_BAND` | `0.10` | Signal A gate: Polymarket mid must be within 0.5 ± this |
+| `CRYPTO_5M_NEUTRAL_BAND` | `0.05` | Signal A gate: Polymarket mid must be within 0.5 ± this |
+| `CRYPTO_5M_MAX_ENTRY_PRICE` | `0.60` | Signal A hard ceiling on ask price |
 | `CRYPTO_5M_SPREAD_THRESHOLD` | `0.97` | Signal B trigger: up_ask + down_ask below this |
 | `CRYPTO_5M_MIN_SECONDS_LEFT` | `60` | Skip markets resolving sooner than this |

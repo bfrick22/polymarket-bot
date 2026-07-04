@@ -39,6 +39,7 @@ from config import (
     CRYPTO_5M_IMPULSE_BPS,
     CRYPTO_5M_IMPULSE_WINDOW_SEC,
     CRYPTO_5M_NEUTRAL_BAND,
+    CRYPTO_5M_MAX_ENTRY_PRICE,
     CRYPTO_5M_SPREAD_THRESHOLD,
     CRYPTO_5M_MIN_SECONDS_LEFT,
     MIN_SHARES,
@@ -293,9 +294,21 @@ class Crypto5mScanner:
 
         direction = "↑" if delta > 0 else "↓"
         side = "UP" if delta > 0 else "DOWN"
+        # Which token we'd buy, at which ask
+        target_ask = up_ask if delta > 0 else down_ask
+        # Entry-price ceiling — refuse to pay for stale/overpriced asks.
+        # This was the main historical loss driver: buying at 90c+ asks that
+        # resolved to $0 on any tiny reversal.
+        if target_ask > CRYPTO_5M_MAX_ENTRY_PRICE:
+            logger.info(
+                f"crypto5m SIGNAL_A [{slug}] {mkt['asset']}{direction} {delta:+.1f}bps "
+                f"skipped: ask ${target_ask:.3f} > max entry ${CRYPTO_5M_MAX_ENTRY_PRICE}"
+            )
+            return False
         logger.info(
             f"crypto5m SIGNAL_A [{slug}] {mkt['asset']}{direction} {delta:+.1f}bps in "
-            f"{CRYPTO_5M_IMPULSE_WINDOW_SEC}s, pm_up_mid={up_mid:.3f} → buy {side}"
+            f"{CRYPTO_5M_IMPULSE_WINDOW_SEC}s, pm_up_mid={up_mid:.3f}, "
+            f"target_ask=${target_ask:.3f} → buy {side}"
         )
         if delta > 0:
             return self._fire(mkt["up_token"], up_ask, slug, "impulse_up")

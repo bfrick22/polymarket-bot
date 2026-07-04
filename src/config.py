@@ -58,9 +58,18 @@ _raw_assets = os.getenv("CRYPTO_5M_ASSETS", "BTC,XRP")
 CRYPTO_5M_ASSETS = [a.strip().upper() for a in _raw_assets.split(",") if a.strip()]
 CRYPTO_5M_MAX_TRADE_USD = float(os.getenv("CRYPTO_5M_MAX_TRADE_USD", "1.0"))
 # Signal A — Binance impulse
-CRYPTO_5M_IMPULSE_BPS = float(os.getenv("CRYPTO_5M_IMPULSE_BPS", "3.0"))  # 0.03% over the window
+# 10 bps default (was 3): only fire when Binance moves significantly, not on
+# every microtick. 3 bps was firing constantly and paying 90c+ asks that
+# resolved to $0 on any reversal.
+CRYPTO_5M_IMPULSE_BPS = float(os.getenv("CRYPTO_5M_IMPULSE_BPS", "10.0"))
 CRYPTO_5M_IMPULSE_WINDOW_SEC = float(os.getenv("CRYPTO_5M_IMPULSE_WINDOW_SEC", "5"))
-CRYPTO_5M_NEUTRAL_BAND = float(os.getenv("CRYPTO_5M_NEUTRAL_BAND", "0.10"))  # mid within 0.5 ± band
+# Tighter neutral band (was 0.10 → 0.05): if Polymarket mid has already moved
+# past 0.55, the edge is gone and we'd be chasing.
+CRYPTO_5M_NEUTRAL_BAND = float(os.getenv("CRYPTO_5M_NEUTRAL_BAND", "0.05"))
+# Hard ceiling on Signal A entry price. Refuses to pay more than this per share
+# for a directional bet. At $0.60 the risk/reward is $0.60 to make $0.40 vs
+# $0.99 to make $0.01 under the old settings.
+CRYPTO_5M_MAX_ENTRY_PRICE = float(os.getenv("CRYPTO_5M_MAX_ENTRY_PRICE", "0.60"))
 # Signal B — spread floor
 CRYPTO_5M_SPREAD_THRESHOLD = float(os.getenv("CRYPTO_5M_SPREAD_THRESHOLD", "0.97"))
 # Don't fire if the market resolves in less than this many seconds (avoid stale fills)
