@@ -37,6 +37,12 @@ MAX_EXPOSURE_PER_MARKET_USD = float(os.getenv("MAX_EXPOSURE_PER_MARKET_USD", "5"
 # position to resolution and never harvest profit or cut losers.
 MIRROR_SELLS = os.getenv("MIRROR_SELLS", "true").lower() in ("1", "true", "yes")
 
+# Only enter markets/events that resolve within this many hours. Filters out
+# long-horizon political/geo positions we don't want to wait months on.
+# Set to 0 to disable the filter. Applies to Phase 1 (copy) and Phase 2 (arb).
+# Phase 3 (crypto 5m) is inherently short-horizon and ignores this.
+MAX_RESOLUTION_HOURS = float(os.getenv("MAX_RESOLUTION_HOURS", "48"))
+
 # Market filter — only copy trades whose title contains one of these keywords (case-insensitive)
 # Set to empty string to copy all markets
 _raw = os.getenv("MARKET_KEYWORDS", "weather,temperature,rain,snow,hurricane,tornado,precipitation,degrees,wind,flood,frost,hail,blizzard,drought")

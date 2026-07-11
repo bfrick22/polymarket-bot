@@ -52,6 +52,7 @@ resource "aws_ecs_task_definition" "bot" {
       { name = "MIN_POSITION_USD",             valueFrom = "${aws_secretsmanager_secret.config.arn}:MIN_POSITION_USD::" },
       { name = "MAX_EXPOSURE_PER_MARKET_USD",  valueFrom = "${aws_secretsmanager_secret.config.arn}:MAX_EXPOSURE_PER_MARKET_USD::" },
       { name = "MIRROR_SELLS",                 valueFrom = "${aws_secretsmanager_secret.config.arn}:MIRROR_SELLS::" },
+      { name = "MAX_RESOLUTION_HOURS",         valueFrom = "${aws_secretsmanager_secret.config.arn}:MAX_RESOLUTION_HOURS::" },
       { name = "MARKET_KEYWORDS",              valueFrom = "${aws_secretsmanager_secret.config.arn}:MARKET_KEYWORDS::" },
 
       # --- Phase 2: multi-outcome arbitrage scanner ---

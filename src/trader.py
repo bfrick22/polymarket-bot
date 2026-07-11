@@ -1,4 +1,6 @@
 import logging
+import time
+from datetime import datetime, timezone
 import requests
 from py_clob_client_v2.client import ClobClient
 from py_clob_client_v2.clob_types import OrderArgs
@@ -11,7 +13,9 @@ from config import (
     MIN_POSITION_USD,
     MAX_EXPOSURE_PER_MARKET_USD,
     MIRROR_SELLS,
+    MAX_RESOLUTION_HOURS,
     DATA_HOST,
+    GAMMA_HOST,
     POLY_ADDRESS,
 )
 
@@ -40,6 +44,45 @@ class CopyTrader:
         our_usd = min(usd_value * ratio, MAX_TRADE_USD)
         our_shares = our_usd / price if price > 0 else 0
         return our_shares
+
+    # Small in-process cache so we don't hit Gamma once per trade for the same
+    # market repeatedly. Not perfect but avoids duplicate calls in a burst.
+    _market_endcache: dict = {}
+
+    def _hours_to_resolution(self, condition_id: str) -> float | None:
+        """
+        Look up the market end date via Gamma and return hours until resolution.
+        Returns None if we can't determine it (fail-safe: caller should treat
+        that as 'don't skip' to avoid dropping trades on API hiccups).
+        """
+        if not condition_id:
+            return None
+        cached = self._market_endcache.get(condition_id)
+        if cached and cached["expires_at"] > time.time():
+            return cached["hours_left"]
+        try:
+            r = requests.get(
+                f"{GAMMA_HOST}/markets",
+                params={"condition_ids": condition_id},
+                timeout=8,
+            )
+            r.raise_for_status()
+            data = r.json()
+            if not data or not isinstance(data, list):
+                return None
+            end_s = data[0].get("endDate") or ""
+            if not end_s:
+                return None
+            end_ts = datetime.fromisoformat(end_s.replace("Z", "+00:00")).timestamp()
+            hours_left = (end_ts - time.time()) / 3600.0
+            # Cache for 5 min per market
+            self._market_endcache[condition_id] = {
+                "hours_left": hours_left,
+                "expires_at": time.time() + 300,
+            }
+            return hours_left
+        except (requests.RequestException, ValueError, KeyError):
+            return None
 
     def _get_our_position(self, token_id: str) -> dict | None:
         """
@@ -89,6 +132,18 @@ class CopyTrader:
                 title = (trade.get("title", "") or "").lower()
                 if not any(kw in title for kw in MARKET_KEYWORDS):
                     logger.info(f"Skipping non-matching market: {trade.get('title', 'unknown')}")
+                    return None
+
+            # Resolution-horizon filter — only enter markets settling within
+            # MAX_RESOLUTION_HOURS. Kills long-dated political/geo copies.
+            if MAX_RESOLUTION_HOURS > 0 and side == "BUY":
+                hours_left = self._hours_to_resolution(trade.get("conditionId"))
+                if hours_left is not None and hours_left > MAX_RESOLUTION_HOURS:
+                    logger.info(
+                        f"Skipping long-horizon market: "
+                        f"resolves in {hours_left:.1f}h > {MAX_RESOLUTION_HOURS}h "
+                        f"({trade.get('title','')[:60]})"
+                    )
                     return None
 
             label = f"[{trader_name}] " if trader_name else ""

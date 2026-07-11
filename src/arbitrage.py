@@ -12,6 +12,7 @@ This module does not predict anything. The edge is mechanical.
 import json
 import logging
 import time
+from datetime import datetime, timezone
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -25,6 +26,7 @@ from config import (
     ARB_MAX_BASKET_USD,
     ARB_MIN_OUTCOMES,
     ARB_MAX_OUTCOMES,
+    MAX_RESOLUTION_HOURS,
     MIN_SHARES,
 )
 
@@ -124,6 +126,20 @@ class ArbitrageScanner:
             # would lose money because multiple YES can win or none do.
             if not event.get("negRisk"):
                 continue
+
+            # Resolution-horizon filter — skip baskets that won't resolve for
+            # ages. The Iran-meeting basket that locked up $130 for months
+            # was mathematically correct but tied up capital far too long.
+            if MAX_RESOLUTION_HOURS > 0:
+                end_s = event.get("endDate") or ""
+                if end_s:
+                    try:
+                        end_ts = datetime.fromisoformat(end_s.replace("Z", "+00:00")).timestamp()
+                        hours_left = (end_ts - time.time()) / 3600.0
+                        if hours_left > MAX_RESOLUTION_HOURS:
+                            continue
+                    except ValueError:
+                        pass
 
             markets = event.get("markets", [])
             if not (ARB_MIN_OUTCOMES <= len(markets) <= ARB_MAX_OUTCOMES):

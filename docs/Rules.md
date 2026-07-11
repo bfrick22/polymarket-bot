@@ -147,6 +147,7 @@ All rules are tunable via `.env` without code changes:
 | `MIN_POSITION_USD` | `0.10` | USD floor; below this the BUY is skipped |
 | `MAX_EXPOSURE_PER_MARKET_USD` | `5` | Per-market exposure ceiling for BUYs |
 | `MIRROR_SELLS` | `true` | If true, mirror target SELLs proportionally |
+| `MAX_RESOLUTION_HOURS` | `48` | Only enter markets/events resolving within this many hours. Phases 1 + 2 only. Set 0 to disable. |
 | `POLL_INTERVAL_SEC` | `10` | Seconds between trade-watcher polls |
 | `MARKET_KEYWORDS` | weather terms | Comma-separated title filter; empty = all markets |
 | `ARB_ENABLED` | `true` | Enable the multi-outcome arb scanner |
