@@ -69,6 +69,40 @@ Without this, the bot accumulated positions indefinitely and held losers to reso
 
 ---
 
+## Phase 4 — Claude AI Layer
+
+Optional layer that adds Claude-powered decisioning on top of the deterministic phases. Requires `ANTHROPIC_API_KEY` in `.secrets.env`; the whole layer no-ops without it.
+
+### Shared Client (`src/claude_client.py`)
+
+One process-wide `anthropic.Anthropic()` instance. `get_client()` returns `None` when Phase 4 is disabled — callers check and skip.
+
+### 4B Copy Gate (`src/copy_gate.py`)
+
+Haiku 4.5. Wraps `CopyTrader._mirror_buy`. Inputs: trade + 10 most recent trades from the same target. Output: `{decision, reason}` via `output_config.format`.
+
+- 3s timeout via `client.with_options(timeout=...)`
+- Fail-open by default (matches pre-P4 behavior)
+- System prompt + trader history cached (5 min TTL)
+
+### 4A News Scanner (`src/news_scanner.py`)
+
+Sonnet 4.6 with `web_search_20260209` server tool and adaptive thinking. Every 15 min:
+
+1. `_fetch_short_horizon_catalog()` pulls markets resolving within `MAX_RESOLUTION_HOURS`, skips Phase-3-owned 5m markets
+2. Claude searches the web, returns `ScannerOutput` (candidates + summary)
+3. `execute_candidates()` places BUYs when `NEWS_SCAN_AUTO_TRADE=true`, else advisory-only
+
+System prompt + catalog cached with 1-hour TTL — amortizes across ~4 scans.
+
+### 4C Daily Review (`src/daily_review.py`)
+
+Sonnet 4.6 with adaptive thinking. `maybe_run()` called from the main loop every 10s; fires at most once per calendar day at `DAILY_REVIEW_HOUR_UTC`.
+
+`_gather_activity_snapshot()` builds a JSON dict (trades, positions, rollup totals). Claude returns a markdown report; the module logs it. No order-side effects.
+
+---
+
 ## Ultra-Short Crypto Scanner (`src/crypto_5m.py`) — Phase 3
 
 Scans Polymarket's rolling 5-minute BTC/XRP up-or-down markets and fires on two independent inefficiency signals:
@@ -119,7 +153,7 @@ Orchestrates all skills in sequence:
    - If `ARB_POLL_INTERVAL_SEC` has elapsed since last scan: run `arb_scanner.scan_and_fire()`
    - If `CRYPTO_5M_POLL_INTERVAL_SEC` has elapsed since last tick: run `crypto_5m.scan_and_fire()`
 
-The three cadences are independent: trader copying default 10s, arb scanning 60s, crypto 5m scanner 5s.
+The cadences are independent: trader copying default 10s, arb scanning 60s, crypto 5m scanner 5s, news scanner 15 min, daily review one-shot at a scheduled UTC hour. Copy gate runs synchronously inline on each mirror BUY.
 
 Recovers from unexpected errors without crashing — logs and continues.
 

@@ -43,7 +43,23 @@
         { "name": "CRYPTO_5M_IMPULSE_WINDOW_SEC", "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_IMPULSE_WINDOW_SEC::" },
         { "name": "CRYPTO_5M_NEUTRAL_BAND",       "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_NEUTRAL_BAND::" },
         { "name": "CRYPTO_5M_SPREAD_THRESHOLD",   "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_SPREAD_THRESHOLD::" },
-        { "name": "CRYPTO_5M_MIN_SECONDS_LEFT",   "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_MIN_SECONDS_LEFT::" }
+        { "name": "CRYPTO_5M_MIN_SECONDS_LEFT",   "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:CRYPTO_5M_MIN_SECONDS_LEFT::" },
+
+        { "name": "ANTHROPIC_API_KEY",            "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:ANTHROPIC_API_KEY::" },
+        { "name": "PHASE4_ENABLED",               "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:PHASE4_ENABLED::" },
+        { "name": "COPY_GATE_ENABLED",            "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:COPY_GATE_ENABLED::" },
+        { "name": "COPY_GATE_MODEL",              "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:COPY_GATE_MODEL::" },
+        { "name": "COPY_GATE_TIMEOUT_SEC",        "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:COPY_GATE_TIMEOUT_SEC::" },
+        { "name": "COPY_GATE_FAIL_MODE",          "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:COPY_GATE_FAIL_MODE::" },
+        { "name": "NEWS_SCAN_ENABLED",            "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:NEWS_SCAN_ENABLED::" },
+        { "name": "NEWS_SCAN_MODEL",              "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:NEWS_SCAN_MODEL::" },
+        { "name": "NEWS_SCAN_INTERVAL_MIN",       "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:NEWS_SCAN_INTERVAL_MIN::" },
+        { "name": "NEWS_SCAN_AUTO_TRADE",         "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:NEWS_SCAN_AUTO_TRADE::" },
+        { "name": "NEWS_SCAN_MAX_TRADE_USD",      "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:NEWS_SCAN_MAX_TRADE_USD::" },
+        { "name": "NEWS_SCAN_MAX_TRADES_PER_CYCLE", "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:NEWS_SCAN_MAX_TRADES_PER_CYCLE::" },
+        { "name": "DAILY_REVIEW_ENABLED",         "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:DAILY_REVIEW_ENABLED::" },
+        { "name": "DAILY_REVIEW_MODEL",           "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:DAILY_REVIEW_MODEL::" },
+        { "name": "DAILY_REVIEW_HOUR_UTC",        "valueFrom": "arn:aws:secretsmanager:eu-west-1:YOUR_ACCOUNT_ID:secret:polymarket-bot/config:DAILY_REVIEW_HOUR_UTC::" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

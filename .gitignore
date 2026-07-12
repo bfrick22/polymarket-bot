@@ -1,5 +1,6 @@
 # Secrets — never commit
 .env
+.secrets.env
 
 # Python
 __pycache__/

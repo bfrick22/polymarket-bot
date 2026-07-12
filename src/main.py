@@ -6,6 +6,9 @@ from watcher import TraderWatcher
 from trader import CopyTrader
 from arbitrage import ArbitrageScanner
 from crypto_5m import Crypto5mScanner
+from news_scanner import NewsScanner
+from daily_review import DailyReview
+from claude_client import is_available as claude_available
 from config import (
     TRADERS,
     POLL_INTERVAL_SEC,
@@ -13,6 +16,9 @@ from config import (
     ARB_POLL_INTERVAL_SEC,
     CRYPTO_5M_ENABLED,
     CRYPTO_5M_POLL_INTERVAL_SEC,
+    NEWS_SCAN_ENABLED,
+    NEWS_SCAN_INTERVAL_MIN,
+    DAILY_REVIEW_ENABLED,
 )
 
 logging.basicConfig(
@@ -55,6 +61,25 @@ def main():
         )
     last_crypto_scan = 0.0
 
+    # Phase 4 modules — gated on ANTHROPIC_API_KEY presence
+    news_scanner = NewsScanner(client) if (NEWS_SCAN_ENABLED and claude_available()) else None
+    if news_scanner:
+        logger.info(
+            f"News scanner enabled — scanning every {NEWS_SCAN_INTERVAL_MIN} min (Sonnet 4.6)"
+        )
+    last_news_scan = 0.0
+    news_interval_sec = NEWS_SCAN_INTERVAL_MIN * 60
+
+    daily_review = DailyReview() if (DAILY_REVIEW_ENABLED and claude_available()) else None
+    if daily_review:
+        logger.info("Daily review enabled (Sonnet 4.6)")
+
+    if not claude_available():
+        logger.info(
+            "Phase 4 disabled: ANTHROPIC_API_KEY not set. "
+            "Add it to .secrets.env to enable news scanner, copy gate, and daily review."
+        )
+
     logger.info(f"Watching {len(watchers)} trader(s), polling every {POLL_INTERVAL_SEC}s...")
     while True:
         try:
@@ -63,7 +88,11 @@ def main():
                 if new_trades:
                     logger.info(f"[{entry['name']}] Found {len(new_trades)} new trade(s)!")
                     for trade in new_trades:
-                        copy_trader.copy_trade(trade, trader_name=entry["name"])
+                        copy_trader.copy_trade(
+                            trade,
+                            trader_name=entry["name"],
+                            trader_address=entry["watcher"].trader_address,
+                        )
 
             if arb_scanner and (time.time() - last_arb_scan) >= ARB_POLL_INTERVAL_SEC:
                 last_arb_scan = time.time()
@@ -78,6 +107,19 @@ def main():
                     crypto_5m.scan_and_fire()
                 except Exception as e:
                     logger.error(f"crypto5m scan error: {e}", exc_info=True)
+
+            if news_scanner and (time.time() - last_news_scan) >= news_interval_sec:
+                last_news_scan = time.time()
+                try:
+                    news_scanner.scan_and_execute()
+                except Exception as e:
+                    logger.error(f"news_scanner error: {e}", exc_info=True)
+
+            if daily_review:
+                try:
+                    daily_review.maybe_run()
+                except Exception as e:
+                    logger.error(f"daily_review error: {e}", exc_info=True)
 
         except KeyboardInterrupt:
             logger.info("Bot stopped by user.")

@@ -75,6 +75,23 @@ resource "aws_ecs_task_definition" "bot" {
       { name = "CRYPTO_5M_MAX_ENTRY_PRICE",    valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_MAX_ENTRY_PRICE::" },
       { name = "CRYPTO_5M_SPREAD_THRESHOLD",   valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_SPREAD_THRESHOLD::" },
       { name = "CRYPTO_5M_MIN_SECONDS_LEFT",   valueFrom = "${aws_secretsmanager_secret.config.arn}:CRYPTO_5M_MIN_SECONDS_LEFT::" },
+
+      # --- Phase 4: Claude AI integrations ---
+      { name = "ANTHROPIC_API_KEY",            valueFrom = "${aws_secretsmanager_secret.config.arn}:ANTHROPIC_API_KEY::" },
+      { name = "PHASE4_ENABLED",               valueFrom = "${aws_secretsmanager_secret.config.arn}:PHASE4_ENABLED::" },
+      { name = "COPY_GATE_ENABLED",            valueFrom = "${aws_secretsmanager_secret.config.arn}:COPY_GATE_ENABLED::" },
+      { name = "COPY_GATE_MODEL",              valueFrom = "${aws_secretsmanager_secret.config.arn}:COPY_GATE_MODEL::" },
+      { name = "COPY_GATE_TIMEOUT_SEC",        valueFrom = "${aws_secretsmanager_secret.config.arn}:COPY_GATE_TIMEOUT_SEC::" },
+      { name = "COPY_GATE_FAIL_MODE",          valueFrom = "${aws_secretsmanager_secret.config.arn}:COPY_GATE_FAIL_MODE::" },
+      { name = "NEWS_SCAN_ENABLED",            valueFrom = "${aws_secretsmanager_secret.config.arn}:NEWS_SCAN_ENABLED::" },
+      { name = "NEWS_SCAN_MODEL",              valueFrom = "${aws_secretsmanager_secret.config.arn}:NEWS_SCAN_MODEL::" },
+      { name = "NEWS_SCAN_INTERVAL_MIN",       valueFrom = "${aws_secretsmanager_secret.config.arn}:NEWS_SCAN_INTERVAL_MIN::" },
+      { name = "NEWS_SCAN_AUTO_TRADE",         valueFrom = "${aws_secretsmanager_secret.config.arn}:NEWS_SCAN_AUTO_TRADE::" },
+      { name = "NEWS_SCAN_MAX_TRADE_USD",      valueFrom = "${aws_secretsmanager_secret.config.arn}:NEWS_SCAN_MAX_TRADE_USD::" },
+      { name = "NEWS_SCAN_MAX_TRADES_PER_CYCLE", valueFrom = "${aws_secretsmanager_secret.config.arn}:NEWS_SCAN_MAX_TRADES_PER_CYCLE::" },
+      { name = "DAILY_REVIEW_ENABLED",         valueFrom = "${aws_secretsmanager_secret.config.arn}:DAILY_REVIEW_ENABLED::" },
+      { name = "DAILY_REVIEW_MODEL",           valueFrom = "${aws_secretsmanager_secret.config.arn}:DAILY_REVIEW_MODEL::" },
+      { name = "DAILY_REVIEW_HOUR_UTC",        valueFrom = "${aws_secretsmanager_secret.config.arn}:DAILY_REVIEW_HOUR_UTC::" },
     ]
 
     logConfiguration = {

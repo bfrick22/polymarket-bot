@@ -14,10 +14,12 @@ from config import (
     MAX_EXPOSURE_PER_MARKET_USD,
     MIRROR_SELLS,
     MAX_RESOLUTION_HOURS,
+    COPY_GATE_ENABLED,
     DATA_HOST,
     GAMMA_HOST,
     POLY_ADDRESS,
 )
+from copy_gate import evaluate_trade
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +106,7 @@ class CopyTrader:
             logger.warning(f"Could not fetch our position for {token_id[:16]}...: {e}")
             return None
 
-    def copy_trade(self, trade: dict, trader_name: str = "") -> dict | None:
+    def copy_trade(self, trade: dict, trader_name: str = "", trader_address: str = "") -> dict | None:
         """
         Mirror a single detected trade. Handles BUY and SELL.
 
@@ -145,6 +147,18 @@ class CopyTrader:
                         f"({trade.get('title','')[:60]})"
                     )
                     return None
+
+            # Phase 4B: Claude sanity gate. Runs only on BUYs — SELLs mirror
+            # exits and are already gated by the position lookup.
+            if COPY_GATE_ENABLED and side == "BUY" and trader_address:
+                decision, reason = evaluate_trade(trade, trader_name, trader_address)
+                if decision == "skip":
+                    logger.info(
+                        f"[{trader_name}] copy_gate SKIP: {reason} "
+                        f"({trade.get('title','')[:60]})"
+                    )
+                    return None
+                logger.debug(f"[{trader_name}] copy_gate allow: {reason}")
 
             label = f"[{trader_name}] " if trader_name else ""
 

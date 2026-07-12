@@ -1,12 +1,20 @@
 import os
 import json
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env first (bot config), then .secrets.env (third-party API keys).
+# override=False so .env wins on conflict — .secrets.env only supplies keys not in .env.
+_ROOT = Path(__file__).parent.parent
+load_dotenv(_ROOT / ".env")
+load_dotenv(_ROOT / ".secrets.env", override=False)
 
 # Wallet credentials
 PRIVATE_KEY = os.getenv("PRIVATE_KEY")           # your Polygon wallet private key
 POLY_ADDRESS = os.getenv("POLY_ADDRESS")          # your proxy wallet address (from polymarket.com/settings)
+
+# Anthropic — optional, gates Phase 4
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 
 # Polymarket API endpoints
 CLOB_HOST = "https://clob.polymarket.com"
@@ -80,6 +88,33 @@ CRYPTO_5M_MAX_ENTRY_PRICE = float(os.getenv("CRYPTO_5M_MAX_ENTRY_PRICE", "0.60")
 CRYPTO_5M_SPREAD_THRESHOLD = float(os.getenv("CRYPTO_5M_SPREAD_THRESHOLD", "0.97"))
 # Don't fire if the market resolves in less than this many seconds (avoid stale fills)
 CRYPTO_5M_MIN_SECONDS_LEFT = float(os.getenv("CRYPTO_5M_MIN_SECONDS_LEFT", "60"))
+
+# =====================================================================
+# Phase 4 — Claude AI integrations
+# Master switch requires ANTHROPIC_API_KEY to be present.
+# =====================================================================
+PHASE4_ENABLED = os.getenv("PHASE4_ENABLED", "true").lower() in ("1", "true", "yes") and bool(ANTHROPIC_API_KEY)
+
+# --- 4B: copy-trade sanity gate ---
+COPY_GATE_ENABLED = os.getenv("COPY_GATE_ENABLED", "true").lower() in ("1", "true", "yes")
+COPY_GATE_MODEL = os.getenv("COPY_GATE_MODEL", "claude-haiku-4-5")
+COPY_GATE_TIMEOUT_SEC = float(os.getenv("COPY_GATE_TIMEOUT_SEC", "3"))
+# On Claude API failure/timeout: "allow" (trade fires) or "skip" (trade dropped)
+COPY_GATE_FAIL_MODE = os.getenv("COPY_GATE_FAIL_MODE", "allow").lower()
+
+# --- 4A: news-driven market discovery ---
+NEWS_SCAN_ENABLED = os.getenv("NEWS_SCAN_ENABLED", "true").lower() in ("1", "true", "yes")
+NEWS_SCAN_MODEL = os.getenv("NEWS_SCAN_MODEL", "claude-sonnet-4-6")
+NEWS_SCAN_INTERVAL_MIN = int(os.getenv("NEWS_SCAN_INTERVAL_MIN", "15"))
+# When true, bot enters positions on Claude's candidates. When false, logs only.
+NEWS_SCAN_AUTO_TRADE = os.getenv("NEWS_SCAN_AUTO_TRADE", "false").lower() in ("1", "true", "yes")
+NEWS_SCAN_MAX_TRADE_USD = float(os.getenv("NEWS_SCAN_MAX_TRADE_USD", "2"))
+NEWS_SCAN_MAX_TRADES_PER_CYCLE = int(os.getenv("NEWS_SCAN_MAX_TRADES_PER_CYCLE", "3"))
+
+# --- 4C: daily post-trade review ---
+DAILY_REVIEW_ENABLED = os.getenv("DAILY_REVIEW_ENABLED", "true").lower() in ("1", "true", "yes")
+DAILY_REVIEW_MODEL = os.getenv("DAILY_REVIEW_MODEL", "claude-sonnet-4-6")
+DAILY_REVIEW_HOUR_UTC = int(os.getenv("DAILY_REVIEW_HOUR_UTC", "6"))  # 6 AM UTC ~= 1 AM ET
 
 # Chain
 CHAIN_ID = 137  # Polygon mainnet

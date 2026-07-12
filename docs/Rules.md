@@ -128,7 +128,37 @@ Binance WebSocket runs in one daemon thread per asset; auto-reconnects on discon
 
 ---
 
-## 11. Error Handling
+## 11. Phase 4 — Claude AI Integrations
+
+Phase 4 requires `ANTHROPIC_API_KEY` in `.secrets.env`. Without it, all three modules stay dark and the bot runs Phases 1-3 only. Each sub-module has its own enable flag.
+
+### 4B — Copy-trade sanity gate (`src/copy_gate.py`)
+
+Runs **inline** on every mirror BUY. Given the trade + the target trader's last 10 trades, Claude Haiku 4.5 returns `{decision: "allow"|"skip", reason}`. Only skip decisions block the trade; the log line records the reason.
+
+- `COPY_GATE_TIMEOUT_SEC` (default 3s): if Claude doesn't respond in time, honor `COPY_GATE_FAIL_MODE`
+- `COPY_GATE_FAIL_MODE=allow` (default): API failures let the trade fire (matches pre-Phase-4 behavior)
+- Prompt caching (5-min TTL): trader history is stable across calls, so second+ calls in a window read the cache at ~0.1× cost
+
+### 4A — News-driven market discovery (`src/news_scanner.py`)
+
+Runs every `NEWS_SCAN_INTERVAL_MIN` (default 15 min). Sonnet 4.6 with `web_search` and adaptive thinking:
+
+1. Pulls the short-horizon Polymarket catalog (respects `MAX_RESOLUTION_HOURS`, skips 5m crypto that Phase 3 covers)
+2. Searches recent news
+3. Returns 0-5 structured candidates with `{slug, side, size_usd, confidence, rationale}`
+
+When `NEWS_SCAN_AUTO_TRADE=true`, the executor places BUYs subject to `NEWS_SCAN_MAX_TRADE_USD` (default $2) and `NEWS_SCAN_MAX_TRADES_PER_CYCLE` (default 3), deduping on `fired_slugs`. When false, candidates are logged only — start here.
+
+Prompt caching (1-hour TTL): catalog + rules cached. At 15-min cadence that's ~4 reads per write.
+
+### 4C — Daily post-trade review (`src/daily_review.py`)
+
+Once per calendar day at `DAILY_REVIEW_HOUR_UTC` (default 6). Sonnet 4.6 with adaptive thinking reads the last 24h of trades + current positions and writes a report to logs: P&L rollup, per-strategy assessment, concrete config suggestions. Does not touch orders.
+
+---
+
+## 12. Error Handling
 
 A failed trade or scanner cycle (API error, 401, timeout) is logged and skipped. The bot does **not** crash or retry — it continues to the next poll cycle.
 
@@ -167,3 +197,18 @@ All rules are tunable via `.env` without code changes:
 | `CRYPTO_5M_MAX_ENTRY_PRICE` | `0.60` | Signal A hard ceiling on ask price |
 | `CRYPTO_5M_SPREAD_THRESHOLD` | `0.97` | Signal B trigger: up_ask + down_ask below this |
 | `CRYPTO_5M_MIN_SECONDS_LEFT` | `60` | Skip markets resolving sooner than this |
+| `PHASE4_ENABLED` | `true` | Master switch; gated on `ANTHROPIC_API_KEY` |
+| `COPY_GATE_ENABLED` | `true` | Enable Phase 4B copy sanity gate |
+| `COPY_GATE_MODEL` | `claude-haiku-4-5` | Model for the sanity gate |
+| `COPY_GATE_TIMEOUT_SEC` | `3` | Latency budget per copy trade |
+| `COPY_GATE_FAIL_MODE` | `allow` | On API error/timeout: `allow` or `skip` |
+| `NEWS_SCAN_ENABLED` | `true` | Enable Phase 4A news scanner |
+| `NEWS_SCAN_MODEL` | `claude-sonnet-4-6` | Model for news reasoning |
+| `NEWS_SCAN_INTERVAL_MIN` | `15` | Minutes between scans |
+| `NEWS_SCAN_AUTO_TRADE` | `false` | If true, execute BUYs on candidates |
+| `NEWS_SCAN_MAX_TRADE_USD` | `2` | Per-candidate USD cap |
+| `NEWS_SCAN_MAX_TRADES_PER_CYCLE` | `3` | Trades per scan cycle |
+| `DAILY_REVIEW_ENABLED` | `true` | Enable Phase 4C daily review |
+| `DAILY_REVIEW_MODEL` | `claude-sonnet-4-6` | Model for the report |
+| `DAILY_REVIEW_HOUR_UTC` | `6` | UTC hour when the report runs |
+| `ANTHROPIC_API_KEY` | *(from `.secrets.env`)* | Gates all of Phase 4 |
